@@ -1,0 +1,812 @@
+title: 利用Sails.js+MongoDB开发博客系统(3)--账户模块
+tags: sails,mongodb,nodejs,登录注册
+categories: 利用Sails.js+MongoDB开发博客系统
+---
+##章节概述
+在本章中，你讲学习到如下知识： 
+
+* sails中如何配置mongodb
+
+* sails中的模型层（Models）知识，包含有模型属性（attributes），模型生命期回调（lifecycle callbacks）等
+
+* 利用Passport.js来管理我们的账户认证
+
+* 认识密码加密策略---bcrypt
+
+* 认识sails的核心模块---policies
+
+* 如何在sails中撰写自定义配置
+
+* 如何扩展swig模板引擎
+
+* semantic-ui中表单验证模块的应用
+
+##设计
+###用户（User）文档设计
+
+| 名称           | 说明        | 类型         | 限制           |
+| ------------- | ----------- |-------------| -------------|
+| siteName     | 站点名称     | string       | 必选，1~10个字符|
+| siteDesc     | 站点简介     | string       | 可选，不超过20字符|
+| email        | 用户邮箱     | string(email)| 必选，唯一|
+| password     | 密码        | string        | 必选，原始长度不少于6个字符      |
+
+###用户api生成
+
+```
+sails generate api user
+```
+
+可以看到，sails为我们生成了user相应地模型及控制器
+
+![sails_generate_api](http://7pulhb.com1.z0.glb.clouddn.com/sails-generate_api.png)
+
+##配置MongoDB数据库连接
+###安装sails对mongo的依赖
+
+```
+npm install sails-mongo --save
+```
+
+###配置mongo连接
+
+修改__config/connections.js__:
+
+```js
+module.exports.connections = {
+  mongo: {
+    adapter: 'sails-mongo',
+    host: 'localhost', // defaults to `localhost` if omitted
+    port: 27017, // defaults to 27017 if omitted
+    database: 'blog' // or omit if not relevant
+  }
+};
+```
+
+###模型层的基本配置
+
+修改__config/models.js__,配置模型的连接数据库位mongodb，并为每个模型添加updatedAt以及createdAt属性:
+
+```js
+module.exports.models = {
+
+  'connection' : 'mongo',
+  autoCreatedAt: true,
+  autoUpdatedAt: true
+};
+```
+
+##利用Passport.js来管理我们的账户认证
+[__Passport.js__](http://passportjs.org/)是Node.js中一个专注于登录验证的中间件，配置灵活，支持很多第三方登录验证，同时也能与sails无缝衔接。十分感谢[这篇教程](http://iliketomatoes.com/implement-passport-js-authentication-with-sails-js-0-10-2/)帮助我将Passport.js集成到sails中。
+
+###安装相应依赖
+
+安装[bcrypt](),bcrypt被认为是比一般加盐加密更好的密码加密手段，一般的加盐加密在密码较简单是仍可能被暴力破解，bcrypt牺牲了部分性能，来换取更高的密码存储安全，参看如下两篇文章：
+
+* [How To Safely Store A Password](http://codahale.com/how-to-safely-store-a-password/)
+
+* [md5/sha1+salt和Bcrypt](http://www.cnblogs.com/lixiong/archive/2011/12/24/2300098.html)
+
+安装bcrypt:
+
+```
+npm install bcrpyt --save
+```
+
+安装Passport.js:
+
+```
+npm install passport --save
+```
+
+因为我们是本地验证，所以只需要passport的本地验证支持
+
+```
+npm install passport-local --save
+```
+
+###配置User实体
+在此博客系统中，用户注册前需要对用户密码进行bcrypt加密，这将会利用到sails中模型层的生命期回调[Lifecycle callbacks](http://www.sailsjs.org/documentation/concepts/models-and-orm/lifecycle-callbacks),在此，我们用到的生命期为__beforeCreate__，亦即模型创建前执行的回调：
+
+__api/models/User.js__:
+
+```js
+var bcrypt = require('bcrypt');
+module.exports = {
+  attributes: {
+    // 站点名称
+    siteName: {
+      type: 'string',
+      required: true,
+      minLength:1,
+      maxLength:10
+    },
+    // 邮箱
+    email: {
+      type: 'email',
+      unique: true,
+      required: true
+    },
+    // 密码
+    password: {
+      type: 'string',
+      required: true
+    },
+    // 站点简介
+    siteDesc: {
+      type: 'string',
+      defaultsTo: '暂无简介',
+      maxLength:40
+    },
+    // 是否管理员（默认为非管理员）
+    isAdmin: {
+      type: 'boolean',
+      defaultsTo: false
+    }
+  },
+
+  // 创建（注册）用户前，对用户密码加密
+  beforeCreate: function (values, cb) {
+    bcrypt.genSalt(10, function(err, salt) {
+      bcrypt.hash(values.password, salt, function(err, hash) {
+        if(err) return cb(err);
+        values.password = hash;
+        // 执行用户定义回调
+        cb();
+      });
+    });
+  }
+};
+```
+###创建路由及视图
+先创建一个封装了登录注册逻辑的控制器__AuthController.js__
+
+```
+sails generate controller auth
+```
+
+接下来在__config/routes.js__中为我们的登录注册创建相应路由：
+
+```js
+//config/routes.js
+module.exports.routes = {
+
+  /***************************************************************************
+  *                                                                          *
+  * Make the view located at `views/homepage.ejs` (or `views/homepage.jade`, *
+  * etc. depending on your default view engine) your home page.              *
+  *                                                                          *
+  * (Alternatively, remove this and add an `index.html` file in your         *
+  * `assets` directory)                                                      *
+  *                                                                          *
+  ***************************************************************************/
+
+  //'/': {
+  //  view: 'homepage'
+  //}
+
+  '/' : {
+    view :'index'
+  },
+
+  //---------------Login & Register
+    // 跳转到注册页面
+    'get /register': 'AuthController.toRegister',
+    // 处理注册逻辑
+    'post /register': 'AuthController.processRegister',
+    // 跳转到登陆页
+    'get /login': {
+        view: 'passport/login'
+    },
+    // 处理登陆逻辑
+    'post /login': 'AuthController.processLogin',
+    // 登出逻辑
+    '/logout': 'AuthController.logout'
+};
+```
+###创建对应的视图
+
+>相应地css文件内容不给出，UI设计见仁见智。
+
+__views/passport/layout.swig__:
+
+```twig
+{% extends '../partial/layout.swig' %}
+{% block stylesheets -%}
+<link rel="stylesheet" type="text/css" href="{{ path.style }}/passport.css"/>
+{%- endblock %}
+```
+
+注意，给登录及注册页面声明待调用模块：
+__passport/login__及__passport/register__
+
+__views/passport/login.swig__:
+
+```twig
+{% extends 'layout.swig' %}
+{% set module = 'passport/login' %}
+{% block title -%}欢迎登录{%- endblock %}
+{% block form_content -%}
+    <form class="ui form" action="/login" method="post">
+        <h1 class="ui dividing header">欢迎登录</h1>
+        {% if err -%}
+            <div class="ui error message" style="display: block">
+                <div class="header">登录失败</div>
+                <p>账号或密码错误</p>
+            </div>
+        {%- endif %}
+        <div class="field">
+            <input id="email" name="email" type="text" placeholder="您的邮箱">
+        </div>
+        <div class="field">
+            <input id="password" name="password" type="password" placeholder="您的密码"/>
+        </div>
+        <div class="field">
+            <div class="ui buttons">
+                <button class="ui positive button" type="submit">登录</button>
+                <div class="or"></div>
+                <a class="ui negative button" href="/register">注册</a>
+            </div>
+        </div>
+    </form>
+{%- endblock %}
+```
+
+__views/passport/register.swig__:
+
+```twig
+{% extends 'layout.swig' -%}
+{% set module='passport/register' %}
+{% block title -%}注册{%- endblock %}
+{% block form_content -%}
+    <form class="ui form" action="/register" method="post">
+        <h1 class="ui dividing header">欢迎注册</h1>
+        {% if err -%}
+            <div class="ui error message" style="display: block">
+                <div class="header">注册失败</div>
+                <p>邮箱已被注册</p>
+            </div>
+        {%- endif %}
+        <div class = "field">
+            <input id="siteName" name="siteName" type="text" placeholder="填写站点名称"/>
+        </div>
+        <div class="field">
+            <input id="email" name="email" type="email" placeholder="填写邮箱">
+        </div>
+        <div class="field">
+            <input id="password" name="password" type="password" placeholder="填写密码（不少于6个字符）"/>
+        </div>
+        <div class="field">
+            <textarea id="siteDesc" name="siteDesc" placeholder="填写站点简介"></textarea>
+        </div>
+        <div class="field">
+            <div class="ui buttons">
+                <button class="ui positive button" type="submit">注册</button>
+                <div class="or"></div>
+                <a class="ui negative button" href="/login">登录</a>
+            </div>
+        </div>
+    </form>
+{%-endblock %}
+```
+
+###撰写登录验证逻辑，[感谢Giancarlo Soverini提供教程](http://iliketomatoes.com/implement-passport-js-authentication-with-sails-js-0-10-2/)
+
+在__api/controllers/AuthController.js__添加如下内容：
+
+```js
+/**
+* 验证逻辑控制器
+* */
+var passport = require('passport');
+module.exports = {
+    /**
+     * 处理注册逻辑
+     * @param req
+     * @param res
+     */
+    processRegister: function(req,res){
+        // 由请求参数构造待创建User对象
+        var user = req.allParams();
+        User.create(user).exec(function createCB(err, created){
+            if(err){
+               // 如果有误，返回错误
+                res.view('passport/register',{err:err});
+            }else{
+                // 否则，将新创建的用户登录
+                req.login(created, function(err) {
+                    if (err) { return next(err); }
+                    return res.redirect('/');
+                });
+            }
+        });
+    },
+    /**
+     * 处理登陆逻辑
+     * @param req
+     * @param res
+     */
+    processLogin: function(req,res){
+        // 使用本地验证策略对登录进行验证
+        passport.authenticate('local', function(err, user, info) {
+            if ((err) || (!user)) {
+                return res.send({
+                    message: info.message,
+                    user: user
+                });
+            }
+            req.logIn(user, function(err) {
+                if (err) res.send(err);
+                return res.send({
+                    message: info.message,
+                    user: user
+                });
+            });
+
+        })(req, res);
+    },
+    /**
+     * 处理登出逻辑
+     * @param req
+     * @param res
+     */
+    logout: function(req, res) {
+        req.logout();
+        res.redirect('/');
+    }
+};
+```
+
+> 任何sails的控制器方法都有两个参数，[req（请求）对象](http://www.sailsjs.org/documentation/reference/request-req)及[res（响应）对象](http://www.sailsjs.org/documentation/reference/response-res)。
+
+创建__config/passport.js__对passport验证进行如下配置：
+
+```js
+var passport = require('passport'),
+    // 使用本地登录逻辑
+    LocalStrategy = require('passport-local').Strategy,
+    // 使用bcrypt进行密码加密
+    bcrypt = require('bcrypt');
+
+passport.serializeUser(function(user, done) {
+    done(null, user.id);
+});
+
+passport.deserializeUser(function(id, done) {
+    User.findOne({ id: id } , function (err, user) {
+        done(err, user);
+    });
+});
+
+passport.use(new LocalStrategy({
+        usernameField: 'email',
+        passwordField: 'password'
+    },
+    function(email, password, done) {
+
+        User.findOne({ email: email }, function (err, user) {
+            if (err) { return done(err); }
+            if (!user) {
+                return done(null, false, { message: 'Incorrect email.' });
+            }
+
+            bcrypt.compare(password, user.password, function (err, res) {
+                if (!res)
+                    return done(null, false, {
+                        message: 'Invalid Password'
+                    });
+                var returnUser = {
+                    email: user.email,
+                    createdAt: user.createdAt,
+                    id: user.id
+                };
+                return done(null, returnUser, {
+                    message: 'Logged In Successfully'
+                });
+            });
+        });
+    }
+));
+```
+
+##访问控制(ACL)
+将sails启动后，访问[localhost:1337/register](http://localhost:1337)进行用户注册:
+
+![注册页面](http://7pulhb.com1.z0.glb.clouddn.com/sails-注册页面.png)
+
+然后可以在mongodb中看到，我们成功创建了用户:
+
+![mongo_user_created](http://7pulhb.com1.z0.glb.clouddn.com/sails-2_user_created.png)
+
+###Policies
+
+如何对系统中的页面进行访问控制，这里就要用到sails的核心组件---[Policies](http://www.sailsjs.org/documentation/concepts/policies)，接下来我们创建几个policy来对我们的业务逻辑进行访问控制（access control）。
+
+首先，创建__api/policies/isAuthenticated.js__，该policy用于判断请求是否授权（即用户是否登录）：
+
+```js
+/**
+ * 用户是否被授权
+ * @param req
+ * @param res
+ * @param next
+ * @returns {*}
+ */
+module.exports = function(req, res, next) {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    else{
+        return res.redirect('/login');
+    }
+};
+```
+
+因为本博客系统__仅允许单用户__存在，故在跳转到注册的业务逻辑时，我们需要知道用户是否被创建，如果用户被创建，则跳转回首页，否则继续执行注册相应逻辑：
+
+创建__api/policies/userNotCreated.js__:
+
+```js
+module.exports = function (req, res, next) {
+    // 检查数据库中是否已经有用户
+    User.find().exec(function(err,users){
+        if(users.length){
+            res.redirect('/logout');
+        }else {
+            next();
+        }
+    });
+};
+```
+
+
+
+同时，本系统显然只有当用户存在时访问才是有效地（否则没有文章来源）：
+
+创建__api/policies/userCreated.js__:
+
+```js
+module.exports = function (req, res, next) {
+    // 检查数据库中是否已经有用户
+    User.find().exec(function(err,users){
+        if(users.length){
+            next();
+        }else {
+            res.redirect('/register');
+        }
+    });
+};
+```
+
+
+
+然后设置__config/policies.js__，建立policy与各业务逻辑的映射关系：
+
+> __true__的含义代表，该业务逻辑可被任何角色访问，而通配符*则代表所有业务逻辑(action)
+
+```js
+
+/**
+ * Policy Mappings
+ */
+module.exports.policies = {
+
+
+    // 默认所有行为需要登录
+    // 若某些行为不需要，则在下面声明
+    '*': 'isAuthenticated',
+
+    // 验证逻辑都不需要登录
+    // 用户创建后不再允许注册
+    AuthController: {
+        '*': true,
+        toRegister: 'userNotCreated'
+    },
+
+};
+
+```
+
+接下来重启sails，并访问[localhost:1337](http://localhost:1337),我们将会被跳转登录页：
+
+![登录页](http://7pulhb.com1.z0.glb.clouddn.com/sails-登陆页面.png)
+
+##优化
+注入站点名称（siteName），站点简介（siteDesc）等属性将经常被不止一个页面所访问，如果每次我们进行数据库查询获取这两个数据将会是十分低效的，在这里，我们通过sails灵活的自定义配置来设置这两个属性。
+
+创建__config/site.js__：
+
+```js
+module.exports.site = {
+    // 站点名称
+    name  : "",
+    // 站点介绍
+    desc  : "",
+};
+```
+
+现在，在swig中，我们可以通过如下方式访问到这两个变量了:
+
+```twig
+{{ sails.config.site.name }}
+{{ sails.config.site.desc }}
+```
+
+然后，这样的书写方式太过冗长，为此，我们修改我们的视图配置，让页面维护一个__site__对象：
+
+__config/views.js__:
+
+```js
+var extras = require('swig-extras');
+module.exports.views = {
+    engine: {
+        /* Template File Extension */
+        ext: 'swig',
+
+        /* Function to handle render request */
+        fn: function (path, data, cb) {
+            /* Swig Renderer */
+            var swig = require('swig');
+            // 保证我们在开发环境下每次更改swig不用重启sails
+            if (data.settings.env === 'development') {
+                swig.setDefaults({cache: false});
+            }
+            // 维护一个site变量
+            data.site = sails.config.site;
+            // 提供一个变量标示用户是否登录
+            if (typeof (data.isLogged) == 'undefined') {
+                data.isLogged = !!data.req.isAuthenticated();
+            }
+            /*
+             * 绑定一些常用路径
+             * Thanks to: https://github.com/mahdaen/sails-views-swig
+             * */
+            var paths = {
+                script: '/js',
+                style: '/styles/default',
+                image: '/images',
+                font: '/fonts',
+                icon: '/icons',
+                bower: '/bower_components'
+            };
+
+            if (!data.path) {
+                data.path = paths;
+            }
+            else {
+                for (var key in paths) {
+                    if (!key in data.path) {
+                        data.path[key] = paths[key];
+                    }
+                }
+            }
+            // 补充extra
+            extras.useFilter(swig, 'split');
+            /* Render Templates */
+            return swig.renderFile(path, data, cb);
+        }
+    },
+
+    layout: 'layout',
+
+    partials: false
+
+};
+```
+
+显然，每次服务器启动的时候就应当设置这两个变量，为此，我们修改__config/bootstrap.js__，该文件可以配置服务器启动时的相应动作：
+
+```js
+module.exports.bootstrap = function (cb) {
+    // 启动时刷新站点信息
+    User.find().exec(function(err,users){
+        if(users.length > 0){
+            var user = users[0];
+            sails.config.site.name = user.siteName;
+            sails.config.site.desc = user.siteDesc;
+        }
+        cb();
+    });
+};
+```
+
+而每次用户信息创建或更新时也应当更新站点配置，为此，我们在__User__模型中添加新的生命期回调---afterUpdate及afterCreate:
+
+```js
+
+    afterCreate: function (createdUser, cb) {
+        this.updateSite(user);
+        cb();
+    },
+
+    // 用户信息更新时，更新站点信息
+    afterUpdate: function (user,cb) {
+        this.updateSite(user);
+        cb();
+    },
+
+    // 更新站点信息
+    updateSite: function(user){
+        sails.config.site.name = user.siteName;
+        sails.config.site.desc = user.siteDesc;
+    }
+```
+
+
+##表单验证
+后端的响应属性验证已经在对应的User模型中设置好了，现在我们利用semantic-ui的[表单验证模块](http://semantic-ui.com/collections/form.html)来设置前端表单验证，让登录注册页的交互更加完整。
+
+首先，我们要在__assets/js/common/main.js__中手动声明semantic表单验证组件的位置：
+
+```js
+// 第三方模块声明
+require.config({
+    baseUrl: '/bower_components/',
+    paths: {
+        jquery: 'jquery/dist/jquery',
+        requirejs: 'requirejs/require',
+        'semantic-ui': 'semantic-ui/dist/semantic',
+        underscore: 'underscore/underscore',
+        backbone: 'backbone/backbone',
+        'semantic-form': 'semantic-ui/dist/components/form.min'
+    },
+    packages: [
+
+    ]
+});
+// 加载app，并运行
+require(['/js/common/app.js'],function(app){
+    app.init();
+});
+```
+
+接下来，我们在__assets/js/passport/__目录下创建三个文件：
+
+* __login.js__
+* __register.js__
+* __PassportPanel.js__
+
+其中，__PassportPanel.js__中提供一个账户框视图组件（继承自__Backbone.View__）供login及register两个module调用。
+
+__PassportPanel.js__:
+
+```js
+define(['semantic-form'], function () {
+    var PassportPanel = Backbone.View.extend({
+        el: $('.passportContainer'),
+        events: {
+            'click input': 'hideError'
+        },
+        initialize: function (which) {
+            // 初始化时绑定表单验证
+            if (which === 'login')
+                this.bindLoginForm();
+            else
+                this.bindRegForm();
+
+        },
+        /**
+         * 聚焦输入框时，隐藏错误提示
+         */
+        hideError: function () {
+            if ($('.error').length > 0) {
+                if (!$('.error').is(':hidden')) {
+                    $('.error').hide();
+                }
+            }
+        },
+        /**
+         * 绑定登录表单验证
+         */
+        bindLoginForm: function () {
+            $('.ui.form').form({
+                inline: true,
+                fields: {
+                    email: {
+                        identifier: 'email',
+                        rules: [
+                            {
+                                type: 'email',
+                                prompt: '请填写正确的邮箱'
+                            }
+                        ]
+                    },
+                    password: {
+                        identifier: 'password',
+                        rules: [
+                            {
+                                type: 'empty',
+                                prompt: '请填写密码'
+                            }
+                        ]
+                    }
+                }
+            });
+        },
+        // 绑定注册表单验证
+        bindRegForm: function () {
+            $('.ui.form').form({
+                inline: true,
+                fields: {
+                    siteName: {
+                        identifier: 'siteName',
+                        rules: [
+                            {
+                                type: 'empty',
+                                prompt: '站点名不能为空'
+                            },
+                            {
+                                type: 'maxLength[10]',
+                                prompt: '站点名不能超过10个字符'
+                            }
+                        ]
+                    },
+                    email: {
+                        identifier: 'email',
+                        rules: [
+                            {
+                                type: 'email',
+                                prompt: '请填写正确的邮箱'
+                            }
+                        ]
+                    },
+                    password: {
+                        identifier: 'password',
+                        rules: [
+                            {
+                                type: 'length[6]',
+                                prompt: '密码不能少于6位'
+                            }
+                        ]
+                    },
+                    siteDesc: {
+                        identifier: 'siteDesc',
+                        rules: [
+                            {
+                                type: 'maxLength[20]',
+                                prompt: '站点简介不超过20字符'
+                            }
+                        ]
+                    }
+                }
+            });
+        }
+
+    });
+    return PassportPanel;
+});
+
+
+```
+
+__login.js__:
+
+```js
+define(['./PassportPanel.js'],function(PassportPanel){
+    return {
+        run: function(){
+            // 如果有错误，则当focus输入域时，自动隐藏错误提示
+            var loginPanel = new PassportPanel('login');
+        }
+    }
+});
+```
+
+__register.js__:
+
+```js
+define(['./PassportPanel.js'],function(PassportPanel){
+    return {
+        run : function(){
+            var regPanel = new PassportPanel('reg');
+        }
+    }
+});
+```
+
+测试一下：
+
+![表单测试](http://7pulhb.com1.z0.glb.clouddn.com/sails-表单验证测试.png)
+
+## 章节预告
+在下一章当中，我们开始实现博客系统的文章模块。
