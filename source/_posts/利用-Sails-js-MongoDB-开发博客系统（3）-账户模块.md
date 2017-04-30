@@ -1,28 +1,31 @@
-title: 利用Sails.js+MongoDB开发博客系统(3)--账户模块
-tags: sails,mongodb,nodejs,登录注册
-categories: 利用Sails.js+MongoDB开发博客系统
+title: 利用 Sails.js + MongoDB 开发博客系统（3）-- 账户模块
+date: 2015-05-03 10:37:57
+tags:
+- Sails
+- Node
+- MongoDB
+categories: 利用 Sails.js + MongoDB 开发博客系统
 ---
-##章节概述
-在本章中，你讲学习到如下知识： 
 
-* sails中如何配置mongodb
+章节概述
+-----------
 
-* sails中的模型层（Models）知识，包含有模型属性（attributes），模型生命期回调（lifecycle callbacks）等
+在本章中，你讲学习到如下知识：
+- Sails 中如何配置 MongoDB。
+- Sails 中的模型层（Models）知识，如模型属性（attributes），模型生命期回调（lifecycle callbacks）等。
+- 利用 Passport.js 来管理我们的账户认证。
+- 认识密码加密策略 bcrypt。
+- 认识Sails的核心模块 policies。
+- 如何在 Sails 中撰写自定义配置。
+- 如何扩展 swig 模板引擎。
+- semantic-ui 中表单验证模块的应用。
 
-* 利用Passport.js来管理我们的账户认证
+<!--more-->
 
-* 认识密码加密策略---bcrypt
+设计
+--------
 
-* 认识sails的核心模块---policies
-
-* 如何在sails中撰写自定义配置
-
-* 如何扩展swig模板引擎
-
-* semantic-ui中表单验证模块的应用
-
-##设计
-###用户（User）文档设计
+### user document 设计
 
 | 名称           | 说明        | 类型         | 限制           |
 | ------------- | ----------- |-------------| -------------|
@@ -31,26 +34,30 @@ categories: 利用Sails.js+MongoDB开发博客系统
 | email        | 用户邮箱     | string(email)| 必选，唯一|
 | password     | 密码        | string        | 必选，原始长度不少于6个字符      |
 
-###用户api生成
+### 生成 user api
 
 ```
 sails generate api user
 ```
 
-可以看到，sails为我们生成了user相应地模型及控制器
+可以看到，Sails 为我们生成了 user 相应地模型及控制器
 
-![sails_generate_api](http://7pulhb.com1.z0.glb.clouddn.com/sails-generate_api.png)
+<div style="text-align:center">
+<img src="http://7pulhb.com1.z0.glb.clouddn.com/sails-generate_api.png" width="300"></img>
+</div>
 
-##配置MongoDB数据库连接
-###安装sails对mongo的依赖
+配置 MongoDB 数据库连接
+---------
+
+### 安装 Sails 对 MongoDB 的依赖
 
 ```
 npm install sails-mongo --save
 ```
 
-###配置mongo连接
+### 配置 MongoDB 连接
 
-修改__config/connections.js__:
+修改 config/connections.js:
 
 ```js
 module.exports.connections = {
@@ -63,9 +70,9 @@ module.exports.connections = {
 };
 ```
 
-###模型层的基本配置
+### 模型层的基本配置
 
-修改__config/models.js__,配置模型的连接数据库位mongodb，并为每个模型添加updatedAt以及createdAt属性:
+修改 config/models.js，配置模型的连接数据库位 MongoDB，并为每个模型添加 updatedAt 以及 createdAt 属性:
 
 ```js
 module.exports.models = {
@@ -76,37 +83,37 @@ module.exports.models = {
 };
 ```
 
-##利用Passport.js来管理我们的账户认证
-[__Passport.js__](http://passportjs.org/)是Node.js中一个专注于登录验证的中间件，配置灵活，支持很多第三方登录验证，同时也能与sails无缝衔接。十分感谢[这篇教程](http://iliketomatoes.com/implement-passport-js-authentication-with-sails-js-0-10-2/)帮助我将Passport.js集成到sails中。
+## 利用 Passport.js 来管理我们的账户认证
+[**Passport.js** ](http://passportjs.org/)是 Node.js 中一个专注于登录验证的中间件，配置灵活，支持很多第三方登录验证。十分感谢[这篇教程](http://iliketomatoes.com/implement-passport-js-authentication-with-sails-js-0-10-2/)帮助我将 Passport.js 集成到 Sails 中。
 
-###安装相应依赖
+### 安装依赖
 
-安装[bcrypt](),bcrypt被认为是比一般加盐加密更好的密码加密手段，一般的加盐加密在密码较简单是仍可能被暴力破解，bcrypt牺牲了部分性能，来换取更高的密码存储安全，参看如下两篇文章：
+安装[ bcrypt ](https://www.npmjs.com/package/bcrypt)，bcrypt 被认为是比一般加盐加密更好的密码加密手段，一般的加盐加密在密码较简单是仍可能被暴力破解，bcrypt 牺牲了部分性能，来换取更高的密码存储安全，参看如下两篇文章：
 
-* [How To Safely Store A Password](http://codahale.com/how-to-safely-store-a-password/)
+- [How To Safely Store A Password](http://codahale.com/how-to-safely-store-a-password/)
 
-* [md5/sha1+salt和Bcrypt](http://www.cnblogs.com/lixiong/archive/2011/12/24/2300098.html)
+- [md5/sha1+salt和Bcrypt](http://www.cnblogs.com/lixiong/archive/2011/12/24/2300098.html)
 
-安装bcrypt:
+安装 bcrypt:
 
 ```
 npm install bcrpyt --save
 ```
 
-安装Passport.js:
+安装 Passport.js:
 
 ```
 npm install passport --save
 ```
 
-因为我们是本地验证，所以只需要passport的本地验证支持
+因为我们是本地验证，所以只需要 Passport 的本地验证支持
 
 ```
 npm install passport-local --save
 ```
 
-###配置User实体
-在此博客系统中，用户注册前需要对用户密码进行bcrypt加密，这将会利用到sails中模型层的生命期回调[Lifecycle callbacks](http://www.sailsjs.org/documentation/concepts/models-and-orm/lifecycle-callbacks),在此，我们用到的生命期为__beforeCreate__，亦即模型创建前执行的回调：
+### 配置 user 实体
+在此博客系统中，用户注册前需要对用户密码进行 bcrypt 加密，这将会利用到 Sails 中模型层的生命期回调[ Lifecycle callbacks ](http://www.sailsjs.org/documentation/concepts/models-and-orm/lifecycle-callbacks),在此，我们用到的生命期为 `beforeCreate`，亦即模型创建前执行的回调：
 
 __api/models/User.js__:
 
@@ -158,14 +165,16 @@ module.exports = {
   }
 };
 ```
-###创建路由及视图
-先创建一个封装了登录注册逻辑的控制器__AuthController.js__
+
+### 创建路由及视图
+
+先创建一个封装了登录注册逻辑的控制器 AuthController.js：
 
 ```
 sails generate controller auth
 ```
 
-接下来在__config/routes.js__中为我们的登录注册创建相应路由：
+接下来在 config/routes.js 中为我们的登录注册创建相应路由：
 
 ```js
 //config/routes.js
@@ -204,11 +213,12 @@ module.exports.routes = {
     '/logout': 'AuthController.logout'
 };
 ```
-###创建对应的视图
 
->相应地css文件内容不给出，UI设计见仁见智。
+### 创建对应的视图
 
-__views/passport/layout.swig__:
+>相应地 css 文件内容不给出，UI 设计见仁见智。
+
+views/passport/layout.swig：
 
 ```twig
 {% extends '../partial/layout.swig' %}
@@ -218,9 +228,10 @@ __views/passport/layout.swig__:
 ```
 
 注意，给登录及注册页面声明待调用模块：
-__passport/login__及__passport/register__
 
-__views/passport/login.swig__:
+passport/login 及 passport/register
+
+views/passport/login.swig:
 
 ```twig
 {% extends 'layout.swig' %}
@@ -252,7 +263,7 @@ __views/passport/login.swig__:
 {%- endblock %}
 ```
 
-__views/passport/register.swig__:
+views/passport/register.swig：
 
 ```twig
 {% extends 'layout.swig' -%}
@@ -290,9 +301,9 @@ __views/passport/register.swig__:
 {%-endblock %}
 ```
 
-###撰写登录验证逻辑，[感谢Giancarlo Soverini提供教程](http://iliketomatoes.com/implement-passport-js-authentication-with-sails-js-0-10-2/)
+### 撰写登录验证逻辑，[感谢 Giancarlo Soverini 提供教程](http://iliketomatoes.com/implement-passport-js-authentication-with-sails-js-0-10-2/)
 
-在__api/controllers/AuthController.js__添加如下内容：
+在 api/controllers/AuthController.js 添加如下内容：
 
 ```js
 /**
@@ -357,9 +368,9 @@ module.exports = {
 };
 ```
 
-> 任何sails的控制器方法都有两个参数，[req（请求）对象](http://www.sailsjs.org/documentation/reference/request-req)及[res（响应）对象](http://www.sailsjs.org/documentation/reference/response-res)。
+> 任何 Sails 的控制器方法都有两个参数，[ req（请求）对象](http://www.sailsjs.org/documentation/reference/request-req)及[ res（响应）对象](http://www.sailsjs.org/documentation/reference/response-res)。
 
-创建__config/passport.js__对passport验证进行如下配置：
+创建 config/passport.js 对 Passport 验证进行如下配置：
 
 ```js
 var passport = require('passport'),
@@ -409,20 +420,24 @@ passport.use(new LocalStrategy({
 ));
 ```
 
-##访问控制(ACL)
-将sails启动后，访问[localhost:1337/register](http://localhost:1337)进行用户注册:
+## 访问控制（ACL）
+将 Sails 启动后，访问[ localhost:1337/register ](http://localhost:1337)进行用户注册:
 
-![注册页面](http://7pulhb.com1.z0.glb.clouddn.com/sails-注册页面.png)
+<div style="text-align:center">
+<img src="http://7pulhb.com1.z0.glb.clouddn.com/sails-%E6%B3%A8%E5%86%8C%E9%A1%B5%E9%9D%A2.png" width="500"></img>
+</div>
 
-然后可以在mongodb中看到，我们成功创建了用户:
+然后可以在MongoDB中看到，我们成功创建了用户:
 
-![mongo_user_created](http://7pulhb.com1.z0.glb.clouddn.com/sails-2_user_created.png)
+<div style="text-align:center">
+<img src="http://7pulhb.com1.z0.glb.clouddn.com/sails-2_user_created.png" width="300"></img>
+</div>
 
-###Policies
+### Policies
 
-如何对系统中的页面进行访问控制，这里就要用到sails的核心组件---[Policies](http://www.sailsjs.org/documentation/concepts/policies)，接下来我们创建几个policy来对我们的业务逻辑进行访问控制（access control）。
+如何对系统中的页面进行访问控制，这里就要用到 Sails 的核心组件---[ Policies ](http://www.sailsjs.org/documentation/concepts/policies)，接下来我们创建几个 policy 来对我们的业务逻辑进行访问控制（access control）。
 
-首先，创建__api/policies/isAuthenticated.js__，该policy用于判断请求是否授权（即用户是否登录）：
+首先，创建 api/policies/isAuthenticated.js，该 policy 用于判断请求是否得到授权（即用户是否登录）：
 
 ```js
 /**
@@ -442,9 +457,9 @@ module.exports = function(req, res, next) {
 };
 ```
 
-因为本博客系统__仅允许单用户__存在，故在跳转到注册的业务逻辑时，我们需要知道用户是否被创建，如果用户被创建，则跳转回首页，否则继续执行注册相应逻辑：
+因为本博客系统为私人博客，故在跳转到注册的业务逻辑时，我们需要知道用户是否被创建，如果用户被创建，则跳转回首页，否则继续执行注册相应逻辑：
 
-创建__api/policies/userNotCreated.js__:
+创建 api/policies/userNotCreated.js：
 
 ```js
 module.exports = function (req, res, next) {
@@ -461,9 +476,7 @@ module.exports = function (req, res, next) {
 
 
 
-同时，本系统显然只有当用户存在时访问才是有效地（否则没有文章来源）：
-
-创建__api/policies/userCreated.js__:
+同时，本系统显然只有当用户存在时访问才是有效地（否则没有文章来源）。创建 api/policies/userCreated.js：
 
 ```js
 module.exports = function (req, res, next) {
@@ -478,11 +491,8 @@ module.exports = function (req, res, next) {
 };
 ```
 
+然后设置 config/policies.js，建立 policy 与各业务逻辑的映射关系：
 
-
-然后设置__config/policies.js__，建立policy与各业务逻辑的映射关系：
-
-> __true__的含义代表，该业务逻辑可被任何角色访问，而通配符*则代表所有业务逻辑(action)
 
 ```js
 
@@ -504,17 +514,21 @@ module.exports.policies = {
     },
 
 };
-
 ```
 
-接下来重启sails，并访问[localhost:1337](http://localhost:1337),我们将会被跳转登录页：
+`true` 代表该业务逻辑可被任何角色访问，而通配符 `*` 则代表所有业务逻辑。
 
-![登录页](http://7pulhb.com1.z0.glb.clouddn.com/sails-登陆页面.png)
+接下来重启sails，并访问[ localhost:1337 ](http://localhost:1337)，我们将会被跳转登录页：
 
-##优化
-注入站点名称（siteName），站点简介（siteDesc）等属性将经常被不止一个页面所访问，如果每次我们进行数据库查询获取这两个数据将会是十分低效的，在这里，我们通过sails灵活的自定义配置来设置这两个属性。
+<div style="text-align:center">
+<img src="http://7pulhb.com1.z0.glb.clouddn.com/sails-登陆页面.png" width="800"></img>
+</div>
 
-创建__config/site.js__：
+## 优化
+
+诸如站点名称（siteName），站点简介（siteDesc）等属性将经常被不止一个页面所访问，如果每次我们进行数据库查询获取这两个数据将会是十分低效的，在这里，我们通过 Sails 来设置这两个属性。
+
+创建 config/site.js：
 
 ```js
 module.exports.site = {
@@ -525,14 +539,14 @@ module.exports.site = {
 };
 ```
 
-现在，在swig中，我们可以通过如下方式访问到这两个变量了:
+现在，在swig中，我们可以通过如下方式访问到这两个变量了：
 
 ```twig
 {{ sails.config.site.name }}
 {{ sails.config.site.desc }}
 ```
 
-然后，这样的书写方式太过冗长，为此，我们修改我们的视图配置，让页面维护一个__site__对象：
+这样的书写方式太过冗长，为此，我们修改我们的视图配置，让页面维护一个 `site` 对象：
 
 __config/views.js__:
 
@@ -594,7 +608,7 @@ module.exports.views = {
 };
 ```
 
-显然，每次服务器启动的时候就应当设置这两个变量，为此，我们修改__config/bootstrap.js__，该文件可以配置服务器启动时的相应动作：
+显然，每次服务器启动的时候就应当设置这两个变量，为此，我们修改 config/bootstrap.js，该文件可以配置服务器启动时的相应动作：
 
 ```js
 module.exports.bootstrap = function (cb) {
@@ -610,7 +624,7 @@ module.exports.bootstrap = function (cb) {
 };
 ```
 
-而每次用户信息创建或更新时也应当更新站点配置，为此，我们在__User__模型中添加新的生命期回调---afterUpdate及afterCreate:
+而每次用户信息创建或更新时也应当更新站点配置，为此，我们在 user 模型中添加新的生命期回调： `afterUpdate` 及 `afterCreate`:
 
 ```js
 
@@ -633,10 +647,11 @@ module.exports.bootstrap = function (cb) {
 ```
 
 
-##表单验证
-后端的响应属性验证已经在对应的User模型中设置好了，现在我们利用semantic-ui的[表单验证模块](http://semantic-ui.com/collections/form.html)来设置前端表单验证，让登录注册页的交互更加完整。
+## 表单验证
 
-首先，我们要在__assets/js/common/main.js__中手动声明semantic表单验证组件的位置：
+后端的属性验证已经在对应的 user 模型中设置好了，现在我们利用 semantic-ui 的[表单验证模块](http://semantic-ui.com/collections/form.html)来设置前端表单验证，让登录注册页的交互更加完整。
+
+首先，我们要在 assets/js/common/main.js 中手动声明 semantic 表单验证组件的位置：
 
 ```js
 // 第三方模块声明
@@ -660,15 +675,15 @@ require(['/js/common/app.js'],function(app){
 });
 ```
 
-接下来，我们在__assets/js/passport/__目录下创建三个文件：
+接下来，我们在 assets/js/passport 目录下创建三个文件：
 
-* __login.js__
-* __register.js__
-* __PassportPanel.js__
+- login.js
+- register.js
+- PassportPanel.js
 
-其中，__PassportPanel.js__中提供一个账户框视图组件（继承自__Backbone.View__）供login及register两个module调用。
+其中，PassportPanel.js 中提供一个账户框视图组件，该组件继承自 `Backbone.View` ，供 login 及 register 两个 module 调用。
 
-__PassportPanel.js__:
+PassportPanel.js：
 
 ```js
 define(['semantic-form'], function () {
@@ -779,7 +794,7 @@ define(['semantic-form'], function () {
 
 ```
 
-__login.js__:
+login.js：
 
 ```js
 define(['./PassportPanel.js'],function(PassportPanel){
@@ -792,7 +807,7 @@ define(['./PassportPanel.js'],function(PassportPanel){
 });
 ```
 
-__register.js__:
+register.js：
 
 ```js
 define(['./PassportPanel.js'],function(PassportPanel){
@@ -806,7 +821,11 @@ define(['./PassportPanel.js'],function(PassportPanel){
 
 测试一下：
 
-![表单测试](http://7pulhb.com1.z0.glb.clouddn.com/sails-表单验证测试.png)
+<div style="text-align: center">
+<img src="http://7pulhb.com1.z0.glb.clouddn.com/sails-%E8%A1%A8%E5%8D%95%E9%AA%8C%E8%AF%81%E6%B5%8B%E8%AF%95.png" width="800"></img>
+</div>
 
-## 章节预告
+章节预告
+-----------
+
 在下一章当中，我们开始实现博客系统的文章模块。
