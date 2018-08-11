@@ -1,9 +1,13 @@
 title: RMM Level -- 对于 REST 的层级划分模型
 date: 2015-04-30 08:17:19
 tags:
-    - Web 开发
+- Web 开发
+
 categories: Web 开发
+
 ---
+
+
 
 > 原文链接：[https://martinfowler.com/articles/richardsonMaturityModel.html](https://martinfowler.com/articles/richardsonMaturityModel.html)
 

@@ -1,11 +1,15 @@
 title: Redux 中间件的实现
 date: 2016-06-23 18:26:18
 tags:
-    - React
-    - Redux
-    - JavaScript
+
+- React
+- Redux
+
 categories: React
+
 ---
+
+
 
 引子
 -------------

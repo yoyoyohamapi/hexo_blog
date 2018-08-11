@@ -1,9 +1,14 @@
 title: thunkify
 date: 2016-8-02 11:03:08
 tags:
-    - JavaScript
+
+- JavaScript
+
 categories: JavaScript 学习笔记
------
+
+---
+
+
 
 引子
 -------

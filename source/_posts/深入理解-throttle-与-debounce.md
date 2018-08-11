@@ -1,8 +1,13 @@
-title: 深入理解 throttle 与 debounce
-date: 2016-05-29 08:26:38
-tags:
-    - 函数式编程
+title: 深入理解 throttle 与 debounce 
+
+date: 2016-05-29 08:26:38 
+
+tags: 
+
+- 函数式编程
+
 categories: JavaScript 函数式编程
+
 ---
 
 我们先来看一个前端开发中遇到的场景：
@@ -61,9 +66,9 @@ for(var i=0;i<100;i++) {
 
 假设我们想至少等待 1s 才能发出一次新的查询请求，即请求的调用频次不能超过 **1 次/秒**，可以这样设计：
 
-1. 开始：`click` 事件到来， wrapper 被调用
-2. 获得当前时间，比较当前时间距上次 `sendQuery` 执行的时间是否已经足够 `1s` 。
-3. 如果已经足够，那么这次查询请求可以立即被执行，否则计算应该等待的时间，延后执行该请求。
+1.	开始：`click` 事件到来， wrapper 被调用
+	.	获得当前时间，比较当前时间距上次 `sendQuery` 执行的时间是否已经足够 `1s` 。
+	.	如果已经足够，那么这次查询请求可以立即被执行，否则计算应该等待的时间，延后执行该请求。
 
 看代码:
 
@@ -170,9 +175,8 @@ delayedQuery = throttle(sendQuery,1000);
 
 [查看演示](https://jsfiddle.net/softshot/r6uh3xug/2/)
 
-
 Underscore 中的 throttle
----------
+------------------------
 
 可以看出来， 这里我已经用了 `throttle` 来命名我们的函数了，`throttle`，也就是节流阀的意思，很形象是吧，通过这样一个阀门，我们限制函数的执行频次。
 
@@ -261,27 +265,26 @@ if (remaining <= 0 || remaining > wait) {
 
 这种情况就发生在我们当前尝试调用时，并且设置了当前时间点 `now` 之后，上次延时的函数 `later` 开始了执行， 并刷新了 `previous`，此时出现了 `now` 早于 `previous` 的情况。举个栗子：
 
-1. 开始时，我们 `click` 了一次查询按钮，我们将之命名为 `click1`，此时 `previous==0`
-2. 在 `0.4s` 时我们 `click` 了一次查询按钮 `click2`，`now==0.4`, `previous==0`, 则这次点击的查询会至少等待 `0.6s` 才送出，也就是最快要在 `1s` 的时候 `click2` 的查询请求才送出。（由于 `setTimeout(func, wait)` 并不能保证 `func` 的执行开始时间，只能保证 `func` 不早于从现在起到 `wait` 毫秒后发生， 所以 `click2` 的查询请求并不一定在 `1s` 时就能够被送出）
-3. 在 `1.2s` 时，产生 `click3`，`now==1.2`
+1.	开始时，我们 `click` 了一次查询按钮，我们将之命名为 `click1`，此时 `previous==0`
+	.	在 `0.4s` 时我们 `click` 了一次查询按钮 `click2`，`now==0.4`, `previous==0`, 则这次点击的查询会至少等待 `0.6s` 才送出，也就是最快要在 `1s` 的时候 `click2` 的查询请求才送出。（由于 `setTimeout(func, wait)` 并不能保证 `func` 的执行开始时间，只能保证 `func` 不早于从现在起到 `wait` 毫秒后发生， 所以 `click2` 的查询请求并不一定在 `1s` 时就能够被送出）
+	.	在 `1.2s` 时，产生 `click3`，`now==1.2`
 
 那么就会存在如下两种情况：
 
-- `click2` 的查询先于 `click3` 发生，比如在 `1.1s` 时 `click2` 的回调被执行，那么 `click3` 的回调要等 `1-(1.2-1.1)==0.9s` 才发生
-- `1.3s` 时 `click2` 的查询请求开始执行，`previous==1.3`，`remaining=1-(1.2-1.3)==1.1>1`，此时，Underscore 会让 `click3` 的查询请求也开始执行（既不会停止 `click` 的查询请求，也不会停止 `click3` 的查询请求），`click3` 和 `click2` 的返回结果取最近一次。
+-	`click2` 的查询先于 `click3` 发生，比如在 `1.1s` 时 `click2` 的回调被执行，那么 `click3` 的回调要等 `1-(1.2-1.1)==0.9s` 才发生
+		`1.3s` 时 `click2` 的查询请求开始执行，`previous==1.3`，`remaining=1-(1.2-1.3)==1.1>1`，此时，Underscore 会让 `click3` 的查询请求也开始执行（既不会停止 `click` 的查询请求，也不会停止 `click3` 的查询请求），`click3` 和 `click2` 的返回结果取最近一次。
 
 ### leading edge 与 trailing edge
 
 underscore中的 `throttle` 函数提供了第三个参数 `options` 来进行选项配置，并且支持如下两个参数：
 
-1. `leading`：是否设置**节流前缘** -- `leading edge`。前缘的作用是保证第一次尝试调用的 `func` 会被立即执行，否则第一次调用也必须等待 `wait` 时间，默认为 `true`。
-
-2. `trailing`：是否设置**节流后缘** -- `trailing edge`。后缘的作用是：当最近一次尝试调用 `func` 时，如果 `func` 不能立即执行，会延后 `func` 的执行，默认为 `true`。
+1.	`leading`：是否设置**节流前缘** -- `leading edge`。前缘的作用是保证第一次尝试调用的 `func` 会被立即执行，否则第一次调用也必须等待 `wait` 时间，默认为 `true`。
+	.	`trailing`：是否设置**节流后缘** -- `trailing edge`。后缘的作用是：当最近一次尝试调用 `func` 时，如果 `func` 不能立即执行，会延后 `func` 的执行，默认为 `true`。
 
 这两个配置会带来总共四种组合，通过[这个演示](https://jsfiddle.net/softshot/Lakgk99q/9/)，观察不同组合的效果。
 
 debounce
---------------
+--------
 
 在实际项目中，我们还有一种需求，就是如果过于频繁的尝试调用某个函数时，只允许一次调用成功执行。仍然以点击查询按钮异步查询为例，假设我们每次点击的时间间隔都在 `1s` 内，那么所有的点击只有一次能送出请求，要么是第一次，要么是最后一次。显然，`throttle` 是做不到这点的，`throttle` 会至少送出两次请求。针对于此，Underscore 又撰写了 `debounce` 函数。
 
@@ -291,8 +294,8 @@ debounce
 
 从下面的 `debounce` 实现我们可以看到，不同于 `throttle`，`debounce` 不再计算 `remain` 时间，其提供的 `immediate` 参数类似于 `throttle` 中的对于 `leading-edge` 和 `trailing-edge` 的控制：
 
-- `immediate === true`，开启 `leading-edge`，可以执行时立即执行
-- `immediate === false`（默认）开启 `trailing-edge`，可以执行时也必须延后至少 `wait` 个时间才能执行。
+-	`immediate === true`，开启 `leading-edge`，可以执行时立即执行
+		`immediate === false`（默认）开启 `trailing-edge`，可以执行时也必须延后至少 `wait` 个时间才能执行。
 
 因此，`debounce` 后的 `func` 要么立即获得响应，要么延迟一段时间才响应，[查看演示](https://jsfiddle.net/softshot/gamLjgcn/)。
 
@@ -334,7 +337,7 @@ _.debounce = function (func, wait, immediate) {
 ```
 
 应用场景
----------
+--------
 
 ### debounce
 
@@ -342,8 +345,8 @@ _.debounce = function (func, wait, immediate) {
 
 > 高频下只响应一次
 
-1. 遇上疯狂打字员，在输入框快速输入文字（高频），但是我们只想在其完全停止输入时再对输入文字做出处理（一次）。
-2. AJAX，多数场景下，每个异步请求在短时间只能响应一次。比如下拉刷新，不停的到底（高频），但只发送一次 ajax 请求（一次）。
+1.	遇上疯狂打字员，在输入框快速输入文字（高频），但是我们只想在其完全停止输入时再对输入文字做出处理（一次）。
+	.	AJAX，多数场景下，每个异步请求在短时间只能响应一次。比如下拉刷新，不停的到底（高频），但只发送一次 ajax 请求（一次）。
 
 ### throttle
 
@@ -351,15 +354,15 @@ _.debounce = function (func, wait, immediate) {
 
 > 按频率执行调用。
 
-1. 游戏中的按键响应，比如格斗，比如射击，需要控制出拳和射击的速率。
-2. 自动完成，按照一定频率分析输入，提示自动完成。
-3. 鼠标移动和窗口滚动，鼠标稍微移动一下，窗口稍微滚动一下会带来大量的事件，因而需要控制回调的发生频率。
+1.	游戏中的按键响应，比如格斗，比如射击，需要控制出拳和射击的速率。
+	.	自动完成，按照一定频率分析输入，提示自动完成。
+	.	鼠标移动和窗口滚动，鼠标稍微移动一下，窗口稍微滚动一下会带来大量的事件，因而需要控制回调的发生频率。
 
 参考资料
 --------
 
-- [Debounce and Throttle: a visual explanation](http://drupalmotion.com/article/debounce-and-throttle-visual-explanation)
-- [知乎@长天之云的回答](https://www.zhihu.com/question/19805411)
-- [MDN setTimeout](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/setTimeout)
-- [浅谈 Underscore.js 中 _.throttle 和 _.debounce 的差异](https://blog.coding.net/blog/the-difference-between-throttle-and-debounce-in-underscorejs)
-- [Underscore之throttle函数源码分析以及使用注意事项](http://www.easyui.info/archives/1853.html)
+-	[Debounce and Throttle: a visual explanation](http://drupalmotion.com/article/debounce-and-throttle-visual-explanation)
+		[知乎@长天之云的回答](https://www.zhihu.com/question/19805411)
+		[MDN setTimeout](https://developer.mozilla.org/zh-CN/docs/Web/API/Window/setTimeout)
+		[浅谈 Underscore.js 中 _.throttle 和 _.debounce 的差异](https://blog.coding.net/blog/the-difference-between-throttle-and-debounce-in-underscorejs)
+		[Underscore之throttle函数源码分析以及使用注意事项](http://www.easyui.info/archives/1853.html)

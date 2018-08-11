@@ -4,10 +4,16 @@ tags:
 - Sails
 - Node
 - MongoDB
+
 categories: 利用 Sails.js + MongoDB 开发博客系统
+
 ---
 
-## 章节概述
+
+
+章节概述
+---------
+
 在本章中，你将能学到如下知识：
 
 - 如何将 Sails 默认模板引擎替换为 swig，并且设置和扩展 swig。

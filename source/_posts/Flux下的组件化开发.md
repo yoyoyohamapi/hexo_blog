@@ -1,11 +1,16 @@
 title: Flux 下的组件化开发
 date: 2016-06-20 21:20:30
 tags:
-	- React
-	- Flux
-	- JavaScript
+
+- React
+- Flux
+- JavaScript
+
 categories: React
+
 ---
+
+
 
 Flux 构成
 ----------

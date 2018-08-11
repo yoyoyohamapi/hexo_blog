@@ -1,24 +1,29 @@
-title: 使用 ES6 中的 generator 来优化异步过程
-date: 2016-08-01 19:58:27
-tags:
-    - JavaScript
-    - ES6
+title: 使用 ES6 中的 generator 来优化异步过程 
+
+date: 2016-08-01 19:58:27 
+
+tags: 
+
+- JavaScript - ES6
+
 categories: JavaScript 学习笔记
+
 ---
 
-> 原文：[Going Async With ES6 Generators](https://davidwalsh.name/async-generators)
-> 本文在作者文章的基础上，适当补充了一些代码及说明
+
+
+> 原文：[Going Async With ES6 Generators](https://davidwalsh.name/async-generators) 本文在作者文章的基础上，适当补充了一些代码及说明
 
 ES6 中的 generator 能够帮助我们提供一种类似同步一样的代码风格，来将异步过程的具体实现隐藏。这样的好处就是我们能够更加自然的表达自己的业务流程（work flow），而避免陷入异步的麻烦中。换言之，借助于 generator，我们既拥有了异步执行的能力，又不用再绞尽脑汁的去维护异步代码。
 
-继续阅读本文，你会发现这么做的结果简直太美妙了，以前那些糟糕的异步代码现在讲会想同步代码那样变得**易于阅读**和**可维护**。需要知道的是，这个同步只是代码风格上的同步，他的执行过程仍然是异步的。
+继续阅读本文，你会发现这么做的结果简直太美妙了，以前那些糟糕的异步代码现在讲会向同步代码那样变得**易于阅读**和**可维护**。需要知道的是，这个同步只是代码风格上的同步，他的执行过程仍然是异步的。
 
 说了那么多，仍然有些抽象，现在我们由浅入深地看看到底怎么通过 ES6 来优化异步过程。
 
 <!--more-->
 
 一个最简单的异步
-----------
+----------------
 
 假设我们的程序原来拥有这样的异步代码，这是最为朴实和原始的 JavaScript 异步流程控制：
 
@@ -125,7 +130,7 @@ const data = JSON.parse( result1 );
 > 在该场景下，暂停的持续时间变得很微妙，他可能很长（比如向服务器请求值），也可能很短（比如从内存缓存中请求值），但在我们的 `*main()` 中，还是只关注工作流（flow），无论异步过程的实现细节是否变得复杂。
 
 更好的异步流程控制
-----------
+------------------
 
 上面的代码已经满足了一些简单的异步场景。但是很快，他的功能就会显得捉襟见肘，我们需要一个更加强大的异步机制来结合我们的 generator 去满足更大的业务场景。这个机制就是 **Promises**。
 
@@ -133,7 +138,7 @@ const data = JSON.parse( result1 );
 
 首先，我们反思一下之前的设计缺陷：
 
-- 缺乏清晰的错误处理
+-	缺乏清晰的错误处理
 
 在[作者之前撰写的文章](https://davidwalsh.name/es6-generators-dive#error-handling)中，我们能够知道一些在 Ajax 调用过程中检测错误的手段：通过 `it.throw(..)` 将错误返回的 generator 中，而在 generator 中，我们又通过 `try..catch` 来俘获错误，进行错误处理:
 
@@ -185,11 +190,11 @@ function request(url) {
 
 这使得 `request(..)` 难以复用。
 
-- 如果 `makeAjaxCall(..)` 是一个并不受我们的控制的第三方库
+-	如果 `makeAjaxCall(..)` 是一个并不受我们的控制的第三方库
 
 我们如果要在其中做诸如 `it.next(..)` 这样对 generator 的控制，就不得不修改这个库的实现，耗费人力不说，随意破坏第三方库也会使得代码难以移植。
 
-- 并行任务。
+-	并行任务。
 
 由于 generator 中的 `yield` 是一个单步暂停点，同一时刻就只能跑一个任务。所以，我们渴望一个新的方式去执行并行任务，并且不需要太多的人工介入。
 
@@ -239,10 +244,7 @@ function runGenerator(g) {
 }
 ```
 
-我们可以分析一下该工具函数的执行过程：
-1. 我们首先初始化了传入的 generator 的迭代器 `it`，并且创建了一个迭代函数 `iterate`，该迭代函数用来**继续** generator 的流程，从而让 generator 的自动执行至完毕。
-2. 每次我们执行 `iterator(val)`，就会调用 `it.next(val)`，并且获得结果 `ret`。假设我们 generator 中的执行语句是 `yield request( "http://some.url.1" )`，`request(..)` 会返回一个 Promise 对象，此时，`ret` 也就是该 Promise 对象，我们向其 `then(..)` 方法注册 `iterator`，使得该 Promise 对象完成后能够进入下一个 Promise 对象的流程，并且每次完成都会继续 generator。
-3. 当 `iterator(val)` 不停流转，直至 `val` 是一个立即数时，暗示 Promise 链执行完毕，获得了结果，将其返回到 generator 使 generator 得以继续执行。
+我们可以分析一下该工具函数的执行过程： 1. 我们首先初始化了传入的 generator 的迭代器 `it`，并且创建了一个迭代函数 `iterate`，该迭代函数用来**继续** generator 的流程，从而让 generator 的自动执行至完毕。 2. 每次我们执行 `iterator(val)`，就会调用 `it.next(val)`，并且获得结果 `ret`。假设我们 generator 中的执行语句是 `yield request( "http://some.url.1" )`，`request(..)` 会返回一个 Promise 对象，此时，`ret` 也就是该 Promise 对象，我们向其 `then(..)` 方法注册 `iterator`，使得该 Promise 对象完成后能够进入下一个 Promise 对象的流程，并且每次完成都会继续 generator。 3. 当 `iterator(val)` 不停流转，直至 `val` 是一个立即数时，暗示 Promise 链执行完毕，获得了结果，将其返回到 generator 使 generator 得以继续执行。
 
 > 简言之，结合了 Promise 的 generator 异步流程就是：每次 `yield` 一个 Promise 进入暂停态，在 Promise 完成后 generator 得以继续执行。
 
@@ -276,15 +278,12 @@ it.next().value.then((result1)=>{
 
 如果业务流非常漫长，则撰写的嵌套是非常恐怖的。
 
-现在，我们已经使用了 Promise 来管理基于 generator 的异步流程，它将我们从充满了诸如回调陷阱（callback hell）中解放了出来。通过 generators+promise 这个设计模式，我们阐述一下如何解决上面提到的三个问题：
-1. 现在，我们拥有内置的错误处理。虽然这点没有在上面的 `runGenerator(..)` 进行揭示，但是，后文会讲到，在新的设计模式下，从 Promise 中监听所有的错误并不困难。最终通过将错误绑定到 `it.throw(..)`，我们就可以放心的在 generator 中使用 `try..catch` 语句来捕获和处理错误。
-2. 我们拥有了 Promise 提供的 [control/trustability](https://blog.getify.com/promises-part-2/#uninversion)。
-3. Promise 已经做了大量抽象帮助我们方便的操纵多个 “并行的” 任务。
+现在，我们已经使用了 Promise 来管理基于 generator 的异步流程，它将我们从充满了诸如回调陷阱（callback hell）中解放了出来。通过 generators+promise 这个设计模式，我们阐述一下如何解决上面提到的三个问题： 1. 现在，我们拥有内置的错误处理。虽然这点没有在上面的 `runGenerator(..)` 进行揭示，但是，后文会讲到，在新的设计模式下，从 Promise 中监听所有的错误并不困难。最终通过将错误绑定到 `it.throw(..)`，我们就可以放心的在 generator 中使用 `try..catch` 语句来捕获和处理错误。 2. 我们拥有了 Promise 提供的 [control/trustability](https://blog.getify.com/promises-part-2/#uninversion)。 3. Promise 已经做了大量抽象帮助我们方便的操纵多个 “并行的” 任务。
 
 例如，`yield Promise.all([..])` 将会利用传入的并行的任务数组（数组元素都是 Promise 对象），产出单一的 Promise 对象供 generator 操纵，generator 会等待所有的子 Promise 对象完成（无论完成顺序是怎样的）才继续进行。最后，我们真正返回给 generator 流程的是所有子 Promise 的响应构成的数组，数组元素的顺序会与请求顺序一致。
 
 generators+promise 下的错误处理
------------
+-------------------------------
 
 ```javascript
 function request(url) {
@@ -352,7 +351,7 @@ runGenerator(function *main(){
 如果一个 Promise 的 reject 发生，那么该 reject 对应到的错误会映射到 generator 中的能够捕获的一个错误，这个映射过程是通过 `runGenerator(..)` 中声明的 `it.throw(..)` 来完成的。
 
 generators+promise 下的并行任务
--------------
+-------------------------------
 
 ```javascript
 function request(url) {
@@ -392,6 +391,7 @@ runGenerator( function *main(){
 在上面代码中，`Promise.all([ .. ])` 创建了一个 Promise 对象，该对象会等待三个子 Promise 对象完成。最终，返回的到 generator 的，恢复 generator 执行的，会是该 Promise 对象的执行结果。
 
 ### ES7 中的 `async`
+
 尚未发布的 ES7 标准中提出了一个 `async` 函数，该函数就像我们上面撰写被 `runGenerator(..)` 所包裹的 generator。通过 `await` 关键字，你能够发出 Promise 对象，他会等待这些对象完成后才继续下去（我们甚至都不再需要借助迭代器了）。
 
 aysnc 函数的大致使用过程如下：
@@ -412,7 +412,7 @@ main();
 正如你所看到的那样，一个 `async function` 能够被直接调用，而不需要再包裹上 `runGenerator(..)`。其次，我们将用新的关键字 `await` 来替代 `yield` 告诉 `async function` 在继续前需要等待当前的 Promise 处理完成。
 
 总结
--------
+----
 
 generator+promise 的设计模式集成了强大而优雅的同步式的异步流程控制的优势。通过简单的 wrapper 函数，我们能够自动地运行我们的 generator 直至完成，包括清晰明了的同步式的错误控制。
 

@@ -2,10 +2,15 @@ title: JavaScript 中的递归优化
 date: 2016-06-28 22:45:04
 
 tags:
-	- 函数式编程
-	- JavaScript
+
+- 函数式编程
+- JavaScript
+
 categories: JavaScript 函数式编程
----------------------------------
+
+---
+
+
 
 引子
 ----
@@ -52,7 +57,7 @@ function factorial(n) {
 这个函数有个什么特点呢，就是该函数中的调用 `factorial(n-1)` 并没有发生在函数最后。因此，为了在执行完该调用还能返回到函数中执行后续操作:
 
 1.	赋值给局部变量 `total`：`var total = factorial(n-1)`
-2.	计算 `n*total` 并返回。
+	.	计算 `n*total` 并返回。
 
 那么，当前的运行环境在进入这个调用前，会先将 **调用位置** 以及周围的一些环境保存成一个 **调用帧（call frame）** ，并将该调用帧 **压入（push）** 一个栈空间中，这个栈被称为 **调用栈（call stack）**。当再无调用帧入栈时，就开始逐个 **压出（pop）** 调用帧，调用取值。比如上面的 `factorial(5)` 的执行过程就是一个呈 **金字塔形** 的过程，金字塔的峰值就反应了 `factorial` 对栈空间需求的峰值：
 
@@ -234,9 +239,9 @@ ES6 中的尾递归优化
 --------
 
 -	[Tramponline in Javascript](http://raganwald.com/2013/03/28/trampolines-in-javascript.html)
--	[Wiki 尾调用](https://zh.wikipedia.org/wiki/%E5%B0%BE%E8%B0%83%E7%94%A8)
--	[阮一峰 - 尾调用优化](https://zh.wikipedia.org/wiki/%E5%B0%BE%E8%B0%83%E7%94%A8)
--	[Understanding recursion in functional JavaScript programming](http://www.integralist.co.uk/posts/js-recursion.html)
--	[Functional JavaScript – Tail Call Optimization and Babel](https://taylodl.wordpress.com/2015/08/09/functional-javascript-tail-call-optimization-and-babel/)
+		[Wiki 尾调用](https://zh.wikipedia.org/wiki/%E5%B0%BE%E8%B0%83%E7%94%A8)
+		[阮一峰 - 尾调用优化](https://zh.wikipedia.org/wiki/%E5%B0%BE%E8%B0%83%E7%94%A8)
+		[Understanding recursion in functional JavaScript programming](http://www.integralist.co.uk/posts/js-recursion.html)
+		[Functional JavaScript – Tail Call Optimization and Babel](https://taylodl.wordpress.com/2015/08/09/functional-javascript-tail-call-optimization-and-babel/)
 
 ---
