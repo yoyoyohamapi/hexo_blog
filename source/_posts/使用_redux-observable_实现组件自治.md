@@ -315,13 +315,24 @@ return action$.pipe(
 )
 ```
 
-OK，我们现在**只需要**在数据表格这个容器组件中 dispatch 一个 `LISTEN_POLLING_START` 事件，即可开始我们的轮询，在其对应的 Epic 中，它完全知道什么时候去结束轮询，什么时候去重启轮询。我们的分页组件，排序选择组件都不再需要关心重启轮询这个需求。
+OK，我们现在**只需要**在数据表格这个容器组件挂载时 dispatch 一个 `LISTEN_POLLING_START` 事件，即可开始我们的轮询，在其对应的 Epic 中，它完全知道什么时候去结束轮询，什么时候去重启轮询。我们的分页组件，排序选择组件都不再需要关心重启轮询这个需求。例如分页组件的状态变动的 action 就只需要修改状态即可，而不用再去关注轮询：
 
-![](rxjs_redux_frp.png)
+```ts
+export function changePagination(pagination: IPagination): IAction {
+  return {
+    type: CHANGE_PAGINATION,
+    payload: {
+      pagination
+    }
+  }
+}
+```
 
 在 FRP 模式下，passive 模型让我们观测了 state，声明了轮询的诱因，让轮询收归到了数据表格组件中， 解除了轮询和数据表格与分页，搜索，排序等组件的耦合。实现了数据表格的**组件自治**。
 
 > **组件自治**：组件只用关注如何治理自己。
+
+![](rxjs_redux_frp.png)
 
 总结，利用 FRP 进行副作用处理带来了：
 
