@@ -340,7 +340,7 @@ export function changePagination(pagination: IPagination): IAction {
 - 使用 `switchMap` operator 处理**竞态**任务
 - 尽可能减少组件耦合，来达到**组件自治**。利于多人协作的大型工程。
 
-其带来的利好拳拳打到了传统模式的痛处。下图是一个更直观的对比，同样的业务逻辑，考上的是 redux-saga 实现，考下则是 redux-observable 实现。你一眼就能感受到谁更简洁明了：
+其带来的利好算是拳拳打到了传统模式的痛处。下图是一个更直观的对比，同样的业务逻辑，靠上的是 redux-saga 实现，考下则是 redux-observable 实现。你一眼就能感受到谁更简洁明了：
 
 ![](rxjs_redux_saga.jpg)
 
