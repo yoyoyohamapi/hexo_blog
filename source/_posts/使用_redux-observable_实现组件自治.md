@@ -43,7 +43,11 @@ function (action$: Observable<Action>, state$: StateObservable<State>): Observab
 
 本系列是假定读者有了 FRP 和 RxJS 的基础，因此，关于 RxJS 和 redux-observable 不再赘述。
 
-现在，我们实践一个常见的业务需求 —— 列表页。先罗列列表页的诉求：
+现在，我们实践一个常见的业务需求 —— 列表页。通过这个例子，将展示 redux-observable 1.0 新的特性，并展示在 1.0 下实现的组件自治。
+
+> **组件自治**：组件只用关注如何治理自己。
+
+先看到列表页的诉求：
 
 - 间隔一段时间轮询数据列表
 - 支持搜索，触发搜索时，重新轮询
@@ -51,7 +55,7 @@ function (action$: Observable<Action>, state$: StateObservable<State>): Observab
 - 支持分页，页面容量修改，分页状况变动，重新轮询
 - 组件卸载时，结束轮询
 
-在前端组件化开发的思路下，我们可能会设计如下容器组件（Container），其中基础组件基于 [ant design]()：
+在前端组件化开发的思路下，我们可能会设计如下容器组件（Container），其中基础组件基于 [ant design](https://ant.design/)：
 
 - **数据表格（含分页）**：基于 **Table** 组件
 
@@ -63,9 +67,9 @@ function (action$: Observable<Action>, state$: StateObservable<State>): Observab
 
 ![列表页](rxjs_redux_list_page.png)
 
-借下将会讨论两种不同的模式下，列表应用的状态管理和副作用处理，它们分别是基于 redux-thunk 或者 redux-saga 的传统模式，以及基于 redux-observable 的 FRP 模式。大家可以看到不同模式下，除了基础的对于 Redux 的耦合，组件及其数据生态（状态与副作用）上耦合状况的差异。
+接下来将会讨论两种不同的模式下，列表应用的状态管理和副作用处理，它们分别是基于 redux-thunk 或者 redux-saga 的传统模式，以及基于 redux-observable 的 FRP 模式。大家可以看到不同模式下，除了基础的对于 Redux 的耦合，组件及其数据生态（状态与副作用）上耦合状况的差异。
 
-当然，为了让大家更好的理解文章传达的，我也撰写了一个 **[demo](https://github.com/yoyoyohamapi/self-government-component-with-redux-observable)**，大家可以 clone & run。接下来的代码也都来源于这个 demo。demo 一个 github 小应用，其中你看到用户列表背后是基于 FRP 模式的，Repo 列表则是基于传统模式的：
+当然，为了让大家更好的理解文章，我也撰写了一个 **[demo](https://github.com/yoyoyohamapi/self-government-component-with-redux-observable)**，大家可以 clone & run。接下来的代码也都来源于这个 demo。demo 一个 github 小应用，其中你看到用户列表背后是基于 FRP 模式的，Repo 列表则是基于传统模式的：
 
 ![demo screenshot](rxjs_redux_demo.png)
 
@@ -190,7 +194,30 @@ export function changeSort(sort: string): ThunkResult {
 function (action$: Observable<Action>, state$: StateObservable<State>): Observable<Action>
 ```
 
-state$ 的引入，redux-observable 也到了里程碑，现在，我们能在 Redux 中更进一步地实践 FRP。
+state$ 的引入，让 redux-observable 达到了它的里程碑，现在，我们能在 Redux 中更进一步地实践 FRP。比如下面这个例子（来源自 redux-observable 官方），当 `googleDocument` 状态变动时，我们就自动存储 google 文档：
+
+```js
+const autoSaveEpic = (action$, state$) =>
+  action$.pipe(
+    ofType(AUTO_SAVE_ENABLE),
+    exhaustMap(() =>
+      state$.pipe(
+        pluck('googleDocument'),
+        distinctUntilChanged(),
+        throttleTime(500, { leading: false, trailing: true }),
+        concatMap(googleDocument =>
+          saveGoogleDoc(googleDocument).pipe(
+            map(() => saveGoogleDocFulfilled()),
+            catchError(e => of(saveGoogleDocRejected(e)))
+          )
+        ),
+        takeUntil(action$.pipe(
+          ofType(AUTO_SAVE_DISABLE)
+        ))
+      )
+    )
+  );
+```
 
 回过头来，我们还可以将列表页的需求概括为：
 
@@ -329,8 +356,6 @@ export function changePagination(pagination: IPagination): IAction {
 ```
 
 在 FRP 模式下，passive 模型让我们观测了 state，声明了轮询的诱因，让轮询收归到了数据表格组件中， 解除了轮询和数据表格与分页，搜索，排序等组件的耦合。实现了数据表格的**组件自治**。
-
-> **组件自治**：组件只用关注如何治理自己。
 
 ![](rxjs_redux_frp.png)
 
