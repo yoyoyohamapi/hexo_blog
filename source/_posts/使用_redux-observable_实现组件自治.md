@@ -15,6 +15,11 @@ categories: React
 # 使用 redux-observable 实现组件自治
 
 > 本文是 《使用 RxJS + Redux 管理应用状态》系列第一篇文章，旨在介绍 redux-obervable v1 版本为 React + Redux 带来的组件自治能力。
+>
+> 本系列的文章地址汇总：
+>
+> - [使用 redux-observable 实现组件自治]()
+> - [如何实现一个 redux-observable]()
 
 ## redux-observable 简介
 
@@ -376,6 +381,12 @@ export function changePagination(pagination: IPagination): IAction {
 redux-observable 只是 redux 一个中间件，因此它可以和你现在的 redux-thunk，redux-saga 等共存，redux-observable 的作者你可以渐进地接入 redux-observable 去处理一些复杂的业务逻辑，当你基本熟悉了 RxJS 和 FRP 模式，你会发现它可以做一切。
 
 后续，考虑到整个工程的风格控制，还是建议只选择一套模型，FRP 在复杂场景下表现力卓著，在简单场景下，也不会大炮打蚊子。
+
+## 总结
+
+本文叙述了如何 redux-observable 1.0 提供的 `state$`，解耦组件之间的业务关联，实现单个组件的业务自治。
+
+接下来，将通过一步步实现一个类 redux-observable 中间件，向大家阐述 redux-observable 设计理念和实现原理。
 
 ## 参考资料
 
