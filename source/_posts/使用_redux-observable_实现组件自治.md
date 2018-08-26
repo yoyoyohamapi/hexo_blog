@@ -18,14 +18,16 @@ categories: React
 >
 > 本系列的文章地址汇总：
 >
-> - [使用 redux-observable 实现组件自治]()
-> - [如何实现一个 redux-observable]()
+> - [使用 redux-observable 实现组件自治](http://yoyoyohamapi.me/2018/08/18/%E4%BD%BF%E7%94%A8_redux-observable_%E5%AE%9E%E7%8E%B0%E7%BB%84%E4%BB%B6%E8%87%AA%E6%B2%BB/)
+> - [如何实现一个 redux-observable](http://yoyoyohamapi.me/2018/08/21/%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA_redux-observable/)
+
+<!--more-->
 
 ## redux-observable 简介
 
 [redux-observable](https://github.com/redux-observable/redux-observable) 是 redux 一个中间件，使用了 RxJs 来驱动 action 副作用。与其目的类似的有大家比较熟悉的 [redux-thunk](https://github.com/reduxjs/redux-thunk) 和 [redux-saga](https://github.com/redux-saga/redux-saga)。通过集成 redux-observable，我们可以在 Redux 中使用到 RxJS 所提供的函数响应式编程（FRP）的能力，从而更轻松的管理我们的异步副作用（前提是你熟悉了 RxJS）。
 
-<!--more-->
+
 
 **Epic** 是 redux-observable 的核心概念和基础类型，几乎承载了 redux-observable 的所有。从形式上看，Epic 是一个函数，其接收一个 **action stream**，输出一个新的 action stream：
 

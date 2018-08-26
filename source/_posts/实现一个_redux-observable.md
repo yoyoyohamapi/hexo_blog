@@ -13,6 +13,13 @@ categories: React
 ![](cover.png)
 
 > 本文是 《使用 RxJS + Redux 管理应用状态》系列第二篇文章，将会介绍 redux-observable 的设计哲学和实现思路。返回第一篇：[使用 redux-observable 实现组件自治]()
+>
+> 本系列的文章地址汇总：
+>
+> - [使用 redux-observable 实现组件自治](http://yoyoyohamapi.me/2018/08/18/%E4%BD%BF%E7%94%A8_redux-observable_%E5%AE%9E%E7%8E%B0%E7%BB%84%E4%BB%B6%E8%87%AA%E6%B2%BB/)
+> - [如何实现一个 redux-observable](http://yoyoyohamapi.me/2018/08/21/%E5%AE%9E%E7%8E%B0%E4%B8%80%E4%B8%AA_redux-observable/)
+
+<!--more-->
 
 ## Redux
 
