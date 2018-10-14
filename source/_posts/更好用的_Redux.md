@@ -491,7 +491,7 @@ const user:Model<UserState> = {
 
 上面的种种思考，概括下来其实就是 Dva architecture + redux-observable，前者能够打掉 Redux 冗长啰嗦的样板代码，后者则负责异步任务治理。
 
-比较遗憾的是，Dva 没有使用 redux-observable 进行副作用管理，也没有相关插件实现使用 redux-observable 或者 RxJS 进行副作用管理，并且，通过 Dva 暴露的 hook 去实现一个 redux-observable 的 Dva 中间件也颇为不畅，因此，笔者尝试撰写了一个 [reobservable]() 来实现上面提到框架，它与 Dva 不同的是：
+比较遗憾的是，Dva 没有使用 redux-observable 进行副作用管理，也没有相关插件实现使用 redux-observable 或者 RxJS 进行副作用管理，并且，通过 Dva 暴露的 hook 去实现一个 redux-observable 的 Dva 中间件也颇为不畅，因此，笔者尝试撰写了一个 [reobservable](https://github.com/reobservable/reobservable) 来实现上面提到框架，它与 Dva 不同的是：
 
 1. 只关注应用状态，不涉及组件路由的其他生态
 2. 集成 loading 和 error 处理
