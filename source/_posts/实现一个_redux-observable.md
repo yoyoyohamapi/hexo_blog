@@ -492,108 +492,92 @@ middleware.run()
 
 再考虑一个更加场景，各个 transformer 之间可能存在关联，各个 trasformer 也可能直接发出 action，而不需要依赖于 `action$`：
 
-```js
-  it('should support synchronous emission by transformer on start up', () => {
+```ts
+it('should queue synchronous actions', () => {
     const reducer = (state = [], action) => state.concat(action)
-    const transformer1 = (action$, state$) => of({ type: 'FIRST' })
-    const transformer2 = (action$, state$) => action$.pipe(
+    const transformer1 = (action$, state$) => action$.pipe(
       ofType('FIRST'),
-      mapTo({ type: 'SECOND' })
+      mergeMap(() => of({ type: 'SECOND' }, { type: 'THIRD'} ))
     )
-
-    const epicMiddleware = createEpicMiddleware(epic1, epic2)
-    const store = createStore(reducer, applyMiddleware(epicMiddleware))
-    epicMiddleware.run()
-
+    const transformer2 = (action$, state$) => action$.pipe(
+        ofType('SECOND'),
+        mapTo({type: 'FORTH'})
+    )
+    
+    const middleware = createMiddleware(transformer1, transformer2)
+    const store = createStore(reducer, applyMiddleware(middleware))
+    middleware.run()
+    
     const actions = store.getState()
     actions.shift() // remove redux init action
     expect(actions).to.deep.equal([
       { type: 'FIRST' },
-      { type: 'SECOND' }
+      { type: 'SECOND' },
+      { type: 'THIRD' },
+      { type: 'FORTH' }
     ])
-  })
+})
 ```
 
-在这个测试用例中，我们看到：
-
-- `transformer1` 不依赖于 `action$`，就直接发出了 `FIRST` action
-- `transformer2` 接收到 `FIRST` action 之后，会发出 `SECOND` action
-
-因此，我们期待应用的 action 序列是：
+在这个测试用例中，我们看到的 action 序列是：
 
 ```
 FIRST
 SECOND
+THIRD
+FORTH
 ```
 
-但是，在当前的中间件实现中，你将得到：
+但是，在当前的实现中，你将得到：
 
 ```
 FIRST
+SECOND
+FORTH
+THIRD
 ```
 
-这并不符合预期。但是，问题又出在哪里呢？
+这并不符合预期。但是，问题又出在哪里呢？我们分析下程序执行过程：
 
-我们分析下程序的执行流程，首先，我们通过 `run` 方法启动了中间件，在其中我们的 `newAction$` 订阅了 observer：
+1. 发出 first action
+2. 调度 first action，派生出 second action 及 third action 的 observable
+3. 调度 second action，派生出 forth action 的 observable
+4. 调度 forth action
+5. 调度 third action
+
+问题显然就出在第 2、3 步，如果第 2 步中，我们控制 observable **吐出值**的速度，将同时到来的 second 和 third action 缓存到队列，并依次执行，就能得到我们期望的输出。
+
+幸运的是，RxJS 中提供了 [ `observeOn`](http://reactivex.io/rxjs/class/es6/Observable.js~Observable.html#instance-method-observeOn) 这个 operator 来控制**数据源发出值的节奏**。其第一个参数接收一个调度器，用于告知数据源以怎样的速录调度任务，这里我们将使用 [**Queue Scheduler**](https://rxjs-dev.firebaseapp.com/api/index/const/queueScheduler) 将各个 action 缓存到队列，当此时再无 action 时，各个 action 出队并被调度：
 
 ```ts
-middleware.run = function() {
-  newAction$.subscribe(cachedStore.dispatch)
-  state$.next(cachedStore.getState())
+export const createEpicMiddleware = (...epics) => {
+  const action$ = new Subject().pipe(observeOn(queueScheduler)) as Subject<Action>
+  
+  // ...
+  
+  return middleware
 }
 ```
 
-假定我们令派发 `FIRST` action 和 `SECOND` action 的为 `first$`，和 `second$`，则：
+现在，再次运行测试用例，你讲看到符合期望的 action 序列：
 
 ```ts
-newAction$ = merge($first, second$)
-```
-
-当 `newAction$` subscribe 后，就将发生：
-
-```
-fisrt$ subscribe
-first$ emit FIRST
-store.diapatch(FIRST)
-action$.next(FIRST)
-action$ emit FIRST
-second$ subscribe
-```
-
-可以看到，由于 `first$` 是同步派发值的，它并不会等到 `second$` subscribe 才开始发出值，因此， `second$` 因为 subscribe 滞后，就没能响应 `action$` 中的 `FIRST`。transformer 之间的关联并不成功。
-
-```
-fisrt$ subscribe
-second$ subcscribe
-first$ emit FIRST
-store.diapatch(FIRST)
-action$.next(FIRST)
-action$ emit FIRST
-second$ emit SECOND
-second$ subscribe
-```
-
-RxJS 中提供了 [`subscribeOn`](http://reactivex.io/rxjs/class/es6/Observable.js~Observable.html#instance-method-subscribeOn) 和 [ `observeOn`](http://reactivex.io/rxjs/class/es6/Observable.js~Observable.html#instance-method-observeOn) 两个 operator，二者都接收 [Scheduler](http://reactivex.io/rxjs/class/es6/Scheduler.js~Scheduler.html) 对象作为参数，前者能控制 source `subscribe` observer 的节奏，后者则是控制 source 发出值的节奏。
-
-因此，从需求上看，我们既要控制 `newAction$` 的 subscribe 节奏，也要控制 `newAction$` 的中派发值的节奏。
-
-redux-observable 中，为 merge 后的流使用了 [queue scheduler](http://reactivex.io/rxjs/variable/index.html#static-variable-queue) 进行速率控制：
-
-```ts
-const newAction$ = merge(transformers.map(transformer => transformer(action$, state$))).pipe(
-	observeOn(queueScheduler),
-  subscribeOn(queueScheduler)
-)
-```
-
-这样就能保证上面的测试用例中 action 含有：
-
-```
 FIRST
 SECOND
+THIRD
+FORTH
 ```
 
-为什么使用 queue scheduler，这个故事如何向开发者讲好， redux-observable 的作者也在探索（参看：https://github.com/redux-observable/redux-observable/pull/493），因为牵涉了很复杂。遗憾的是，截止目前为止，本文也只能分析现象的成因，而没法简练地概括 queue scheduler 在这个场景下的调度过程，读者如果对此有较好的认知，建议到官方的讨论下面进行回复。当然，这一块我也会继续关注。
+这是因为：
+
+1. 发出 first action
+2. 调度 first action，入队
+3. 此时没有 action，first action 出队，`store.dispatch(first)`，派生出 second action 及 third action 的 observable
+4. second action 入队，third action 入队
+5. 此时没有等待的 action，则 second action 出队，`store.dispatch(second)`，派生出 forth action 的 observable
+6. forth action 入队
+7. 此时没有等待的 action，队首元素 third action 出队，`store.dispatch(third)`
+8. forth action 出队，`store.dispatch(forth)`
 
 ## 总结
 
