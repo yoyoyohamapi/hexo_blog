@@ -593,7 +593,7 @@ FIRST
 SECOND
 ```
 
-为什么使用 queue scheduler，这个故事如何向开发者讲好， redux-observable 的作者也在探索（参看：https://github.com/redux-observable/redux-observable/pull/493），因为牵涉了很复杂。遗憾的是，截止目前为止，本文也只能分析现象的成因，而没法简练地概括 queue scheduler 在这个场景下的调度过程，读者如果对此有较好的认知，建议到官方的讨论下面进行回复。当然，这一块我也会继续关注。
+为什么使用 queue scheduler，这个故事如何向开发者讲好， redux-observable 的作者也在探索（参看 [github 上对此的讨论](https://github.com/redux-observable/redux-observable/pull/493)），因为牵涉了很复杂递归过程。遗憾的是，截止目前为止，本文也只能分析现象的成因，而没法简练地概括 queue scheduler 在这个场景下的调度过程，读者如果对此有较好的认知，建议到官方的讨论下面进行回复。当然，这一块我也会继续关注。
 
 ## 总结
 
