@@ -12,8 +12,6 @@ categories: Cycle.js
 
 ---
 
-# Cycle.js 状态管理模型
-
 ## 分形（fractal）
 
 当今前端领域，最流行的状态管理模型毫无疑问是 redux，但遗憾的是，redux 并不是一个分形架构。什么是分形架构：
@@ -85,14 +83,14 @@ run(main, { DOM: makeDOMDriver('#app-container') })
 const action$ = new Subject()
 
 const incrReducer$ = action$.pipe(
-	filter(({type}) => type === 'INCR'),
+  filter(({type}) => type === 'INCR'),
   mapTo(function incrReducer(state) {
     return state + 1
   })
 )
 
 const decrReducer$ = action$.pipe(
-	filter(({type}) => type === 'DECR'),
+  filter(({type}) => type === 'DECR'),
   mapTo(function decrReducer(state) {
     return state - 1
   })
@@ -101,8 +99,8 @@ const decrReducer$ = action$.pipe(
 const reducer$ = merge(incrReducer$, decrReducer$)
 
 const state$ = reducer$.pipe(
-  scan((state, reducer) => reducer(state)),
-	startWith(initState),
+  scan((state, reducer) => reducer(state), initState),
+  startWith(initState),
   shareReplay(1)
 )
 ```
